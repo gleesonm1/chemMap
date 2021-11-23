@@ -14,4 +14,4 @@ Currently, chemMap can be used to
 5. Extract a transect from a chemical map.
 6. Separate crystals into subpopulations based on their size (cluster analysis must be performed first).
 
-
+2 examples are currently provided in this repository. One focuses on a lava sample from Floreana in the southern Galapagos and, using raw count data, we identify different olivine populations (based on size) and calculate their forsterite content. The second provides quantitative map data from a gabbroic xenolith collected from Hualali volcano, Hawaii. Using this we can identify crystal populations based on composition and extract a quantitative chemical transect across a crystal.
