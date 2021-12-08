@@ -84,24 +84,23 @@ def Cluster(Data,Oxide,number_of_clusters, Plot = None, Cluster = None, Name = N
         kmeans=KMeans(n_clusters=number_of_clusters,random_state=0).fit(Dat.T)
         Data['Cluster']=kmeans.labels_.reshape(np.shape(Data[list(Oxide)[0]]))
 
-    if Plot is not None:
-        X=np.linspace(0,len(Data[list(Oxide)[0]][0,:])-1,len(Data[list(Oxide)[0]][0,:]))
-        Y=np.linspace(0,len(Data[list(Oxide)[0]][:,0])-1,len(Data[list(Oxide)[0]][:,0]))
-        X, Y = np.meshgrid(X, Y)
-
-        f, a = plt.subplots(1, 1, figsize=(15,15*Y[-1,-1]/X[-1,-1]))
-        a.axis('off')
-        a.set_aspect(len(X)/len(Y))
-        if Cluster is None:
-            z2=a.contourf(X, Y, Data['Cluster'], 20, cmap='viridis',zorder=0)
-        if Cluster is not None:
-            z2=a.contourf(X, Y, Data['Cluster_'+str(Cluster)], 20, cmap='viridis',zorder=0)
-
     if Name is not None:
         if Name==True:
             Data, Nm = NameCluster(Data, Return = True)
         else:
             Data, Nm = NameCluster(Data,Name = Name, Return = True)
+
+    if Plot is not None:
+        if Name is not None:
+            if Cluster is None:
+                a = PlotCluster(Data, number_of_clusters, Name = Nm)
+            else:
+                a = PlotCluster(Data, number_of_clusters, Name = Nm, Cluster=Cluster)
+        else:
+            if Cluster is None:
+                a = PlotCluster(Data, number_of_clusters)
+            else:
+                a = PlotCluster(Data, number_of_clusters, Cluster = Cluster)
 
     if ShowComp is not None:
         for i in range(0,number_of_clusters):
@@ -117,6 +116,37 @@ def Cluster(Data,Oxide,number_of_clusters, Plot = None, Cluster = None, Name = N
                     print('Cluster_' + str(Cluster) + ' ' + str(i) + ',' + ox + ' = '+ str(round(np.nanmean(np.nanmean(Data[ox][np.where(Data['Cluster_' + str(Cluster)]==i)])),2)))
 
     return Data
+
+def PlotCluster(Data, number_of_clusters, Name = None, Cluster = None):
+    Oxide = list(Data.keys())
+    X=np.linspace(0,len(Data[list(Oxide)[0]][0,:])-1,len(Data[list(Oxide)[0]][0,:]))
+    Y=np.linspace(0,len(Data[list(Oxide)[0]][:,0])-1,len(Data[list(Oxide)[0]][:,0]))
+    X, Y = np.meshgrid(X, Y)
+
+    f, a = plt.subplots(1, 1, figsize=(15,15*Y[-1,-1]/X[-1,-1]))
+    a.axis('off')
+    a.set_aspect(len(X)/len(Y))
+
+    cmap = plt.get_cmap('viridis')
+    cmap = cmap(np.linspace(0,1,number_of_clusters))
+
+    if Cluster is None:
+        for i in range(number_of_clusters):
+            if Name is None:
+                a.plot(X[np.where(Data['Cluster'] == i)],Y[np.where(Data['Cluster'] == i)],'s', color = cmap[i], markeredgecolor = 'none', markersize = 1, label = "Cluster" + str(i))
+            else:
+                a.plot(X[np.where(Data['Cluster'] == Name[i])],Y[np.where(Data['Cluster'] == Name[i])],'s', color = cmap[i], markeredgecolor = 'none', markersize = 1, label = Name[i])
+
+        a.legend(markerscale = 10)
+
+    if Cluster is not None:
+        for i in range(number_of_clusters):
+            if Name is None:
+                a.plot(X[np.where(Data['Cluster_'+str(Cluster)] == i)],Y[np.where(Data['Cluster_'+str(Cluster)] == i)],'s', color = cmap[i], markeredgecolor = 'none', markersize = 1)
+
+    plt.show()
+
+    return a
 
 def NameCluster(Data,Name=None, Return = None):
     """
