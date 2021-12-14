@@ -17,7 +17,7 @@ from scipy.ndimage import find_objects
 from .elements import element_properties
 from .elements import correction_models
 
-def calcRatios(Data, oxide = None, ratios = None, numerator = None, denominator = None):
+def calcRatios(Dat, oxide = None, ratios = None, numerator = None, denominator = None):
     """
     Function used to calculate the molar ratio of two elements (A/(A+B)) from wt% quantitative chemical data. This can either be done by specifying one of the pre-defined ratios (Mg#, An, AnK, Cr#) or the numerator and denominator for a new ratio.
 
@@ -42,6 +42,8 @@ def calcRatios(Data, oxide = None, ratios = None, numerator = None, denominator 
         Copy of the input dictionary with additional entries for all ratios calculated.
 
     """
+    Data = Dat.copy()
+
     if oxide is not None:
         if ratios is not None:
             for r in ratios:

@@ -15,6 +15,7 @@ from sklearn.ensemble import RandomForestClassifier
 from scipy.ndimage import label
 from scipy.ndimage import find_objects
 from .elements import element_properties
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 def ElementMap(Data, Element, ColMap = None, Resolution = None, Bounds = None, Cluster = None):
     """
@@ -45,13 +46,22 @@ def ElementMap(Data, Element, ColMap = None, Resolution = None, Bounds = None, C
     f, a: figure and subplot axes
 
     """
-    X=np.linspace(0,len(Data[Element[0]][0,:])-1,len(Data[Element[0]][0,:]))
-    Y=np.linspace(0,len(Data[Element[0]][:,0])-1,len(Data[Element[0]][:,0]))
-    X, Y = np.meshgrid(X, Y)
+    X_1=np.linspace(0,len(Data[Element[0]][0,:])-1,len(Data[Element[0]][0,:]))
+    Y_1=np.linspace(0,len(Data[Element[0]][:,0])-1,len(Data[Element[0]][:,0]))
+    X, Y = np.meshgrid(X_1, Y_1)
 
     f, a = plt.subplots(1, 1, figsize=(15,15*Y[-1,-1]/X[-1,-1]))
     a.axis('off')
-    a.set_aspect(len(X)/len(Y))
+    a.set_aspect(len(X_1)/len(Y_1))
+
+    a.set_xlim([0,len(X_1)])
+    a.set_ylim([0,len(Y_1)])
+
+    H = f.get_figheight()
+    W = f.get_figwidth()
+    dpi = f.get_dpi()
+
+    marker = (dpi*W)/(len(X_1))
 
     i = 0
 
@@ -59,24 +69,26 @@ def ElementMap(Data, Element, ColMap = None, Resolution = None, Bounds = None, C
         ColMap = ['viridis', 'magma', 'Reds', 'Blues']
 
     for E in Element:
+
+        cmap=plt.get_cmap(ColMap[i])
+
         if Bounds is not None:
             Dat = Data[E].copy()
             Dat[np.where(Dat<Bounds[i][0])]=np.nan
             Dat[np.where(Dat>Bounds[i][1])]=np.nan
 
-        if Cluster is None:
-            z1=a.contourf(X, Y, Dat, 20, cmap=ColMap[i],zorder=0)
-            z1=a.contourf(X, Y, Dat, 20, cmap=ColMap[i],zorder=0)
-            z1=a.contourf(X, Y, Dat, 20, cmap=ColMap[i],zorder=0)
-        else:
-            A = Dat
-            A[np.where(Data['Cluster'] != Cluster[i])] = np.nan
-            z1=a.contourf(X, Y, A, 20, cmap=ColMap[i],zorder=0)
-            z1=a.contourf(X, Y, A, 20, cmap=ColMap[i],zorder=0)
-            z1=a.contourf(X, Y, A, 20, cmap=ColMap[i],zorder=0)
+        if Cluster is not None:
+            Dat[np.where(Data['Cluster'] != Cluster[i])] = np.nan
+
+        # determine new colormap
+        my_cmap = cmap(np.arange(cmap.N))
+        my_cmap[:,-1] = np.linspace(0,1,cmap.N)
+        my_cmap = ListedColormap(my_cmap)
+
+        z1 = a.scatter(X.flatten(),Y.flatten(), s = marker, c=Dat.flatten(), marker = 's', cmap = my_cmap)
 
         cbaxes = f.add_axes([0.02, 0.7-0.3*i, 0.02, 0.25])
-        cbar=plt.colorbar(z1,cax=cbaxes)
+        cbar=plt.colorbar(z1, cax=cbaxes)
         if E == 'Mg#' or 'An':
             cbar.set_label(E, rotation=90)
         else:
