@@ -46,13 +46,13 @@ def ElementMap(Data, Element, ColMap = None, Resolution = None, Bounds = None, C
     f, a: figure and subplot axes
 
     """
-    X_1=np.linspace(0,len(Data[Element[0]][0,:])-1,len(Data[Element[0]][0,:]))
-    Y_1=np.linspace(0,len(Data[Element[0]][:,0])-1,len(Data[Element[0]][:,0]))
+    X_1=np.linspace(0,np.shape(Data[Element[0]])[1]-1, np.shape(Data[Element[0]])[1]) #np.linspace(0,len(Data[Element[0]][0,:])-1,len(Data[Element[0]][0,:]))
+    Y_1=np.linspace(0, np.shape(Data[Element[0]])[0]-1, np.shape(Data[Element[0]])[0]) #np.linspace(0,len(Data[Element[0]][:,0])-1,len(Data[Element[0]][:,0]))
     X, Y = np.meshgrid(X_1, Y_1)
 
     f, a = plt.subplots(1, 1, figsize=(15,15*Y[-1,-1]/X[-1,-1]))
     a.axis('off')
-    a.set_aspect(len(X_1)/len(Y_1))
+    a.set_aspect('equal')#len(Y_1)/len(X_1))
 
     a.set_xlim([0,len(X_1)])
     a.set_ylim([0,len(Y_1)])
@@ -71,9 +71,9 @@ def ElementMap(Data, Element, ColMap = None, Resolution = None, Bounds = None, C
     for E in Element:
 
         cmap=plt.get_cmap(ColMap[i])
+        Dat = Data[E].copy()
 
         if Bounds is not None:
-            Dat = Data[E].copy()
             Dat[np.where(Dat<Bounds[i][0])]=np.nan
             Dat[np.where(Dat>Bounds[i][1])]=np.nan
 
@@ -85,7 +85,7 @@ def ElementMap(Data, Element, ColMap = None, Resolution = None, Bounds = None, C
         my_cmap[:,-1] = np.linspace(0,1,cmap.N)
         my_cmap = ListedColormap(my_cmap)
 
-        z1 = a.scatter(X.flatten(),Y.flatten(), s = marker, c=Dat.flatten(), marker = 's', cmap = my_cmap)
+        z1 = a.scatter(X.flatten(),Y.flatten(), s = marker, c=Dat.flatten(), marker = 's', cmap = my_cmap, edgecolor = 'face')
 
         cbaxes = f.add_axes([0.02, 0.7-0.3*i, 0.02, 0.25])
         cbar=plt.colorbar(z1, cax=cbaxes)

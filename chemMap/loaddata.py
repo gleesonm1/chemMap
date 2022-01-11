@@ -107,3 +107,38 @@ def calcOxides(Data, Oxide):
             Quant_ox[ox + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
 
     return Quant_ox
+
+def loadtransect(path, Oxide):
+    """
+    Load quantitative oxide data from an EDS linescan.
+
+    Parameters:
+    ----------
+    path: string, required
+        path to the location of the data.
+
+    oxide: list, required
+        List of the elements to be extracted from the data folder.
+
+    Returns:
+    ----------
+    Data: pandas dataframe
+        Python dataframe containing the linescan values and distances.
+
+    """
+
+    Data=pd.DataFrame()
+    for ox in Oxide:
+        df = pd.read_csv(path + ox + ' Ox%.csv')
+        if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+            Data[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])] = df[ox + ' Ox%']
+        if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+            Data[ox + str(element_properties[ox][3]) + 'O'] = df[ox + ' Ox%']
+        if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+            Data[ox + 'O' + str(element_properties[ox][4])] = df[ox + ' Ox%']
+        if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+            Data[ox +'O'] = df[ox + ' Ox%']
+
+    Data['Distance'] = df['Distance (µm)']
+
+    return Data

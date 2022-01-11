@@ -15,7 +15,10 @@ import random
 from sklearn.ensemble import RandomForestClassifier
 from scipy.ndimage import label
 from scipy.ndimage import find_objects
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from .elements import element_properties
+from sklearn.decomposition import PCA
 
 def Cluster(Data,Oxide,number_of_clusters, Plot = None, Cluster = None, Name = None, ShowComp = None):
     """
@@ -141,13 +144,13 @@ def PlotCluster(Data, number_of_clusters, Name = None, Cluster = None):
 
     """
     Oxide = list(Data.keys())
-    X_1=np.linspace(0,len(Data[list(Oxide)[0]][0,:])-1,len(Data[list(Oxide)[0]][0,:]))
-    Y_1=np.linspace(0,len(Data[list(Oxide)[0]][:,0])-1,len(Data[list(Oxide)[0]][:,0]))
+    X_1=np.linspace(0,np.shape(Data[Oxide[0]])[1]-1, np.shape(Data[Oxide[0]])[1])
+    Y_1=np.linspace(0,np.shape(Data[Oxide[0]])[0]-1, np.shape(Data[Oxide[0]])[0])
     X, Y = np.meshgrid(X_1, Y_1)
 
-    f, a = plt.subplots(1, 1, figsize=(10*X[-1,-1]/X[-1,-1],10*Y[-1,-1]/X[-1,-1]))#(15,15*Y[-1,-1]/X[-1,-1]))
+    f, a = plt.subplots(1, 1, figsize=(15*X[-1,-1]/X[-1,-1],15*Y[-1,-1]/X[-1,-1]))#(15,15*Y[-1,-1]/X[-1,-1]))
     a.axis('off')
-    a.set_aspect(len(X_1)/len(Y_1))
+    a.set_aspect('equal')
 
     a.set_xlim([0,len(X_1)])
     a.set_ylim([0,len(Y_1)])
@@ -164,19 +167,19 @@ def PlotCluster(Data, number_of_clusters, Name = None, Cluster = None):
     if Cluster is None:
         for i in range(number_of_clusters):
             if Name is None:
-                a.plot(X[np.where(Data['Cluster'] == i)],Y[np.where(Data['Cluster'] == i)],'s', color = cmap[i], markeredgecolor = 'none', markersize = marker, label = "Cluster" + str(i))
+                a.plot(X[np.where(Data['Cluster'] == i)],Y[np.where(Data['Cluster'] == i)],'s', color = cmap[i], markeredgecolor = cmap[i], markersize = marker, label = "Cluster" + str(i), markeredgewidth = 0)
             else:
                 if Name[i] == 'nan':
-                    a.plot(X[np.where(Data['Cluster'] == Name[i])],Y[np.where(Data['Cluster'] == Name[i])],'s', color = 'k', markeredgecolor = 'none', markersize = marker, label = Name[i])
+                    a.plot(X[np.where(Data['Cluster'] == Name[i])],Y[np.where(Data['Cluster'] == Name[i])],'s', color = 'k', markeredgecolor = 'k', markersize = marker, label = Name[i], markeredgewidth = 0)
                 else:
-                    a.plot(X[np.where(Data['Cluster'] == Name[i])],Y[np.where(Data['Cluster'] == Name[i])],'s', color = cmap[i], markeredgecolor = 'none', markersize = marker, label = Name[i])
+                    a.plot(X[np.where(Data['Cluster'] == Name[i])],Y[np.where(Data['Cluster'] == Name[i])],'s', color = cmap[i], markeredgecolor = cmap[i], markersize = marker, label = Name[i], markeredgewidth = 0)
 
         a.legend(markerscale = 10)
 
     if Cluster is not None:
         for i in range(number_of_clusters):
             if Name is None:
-                a.plot(X[np.where(Data['Cluster_'+str(Cluster)] == i)],Y[np.where(Data['Cluster_'+str(Cluster)] == i)],'s', color = cmap[i], markeredgecolor = 'none', markersize = marker)
+                a.plot(X[np.where(Data['Cluster_'+str(Cluster)] == i)],Y[np.where(Data['Cluster_'+str(Cluster)] == i)],'s', color = cmap[i], markeredgecolor = 'k', markersize = marker, markeredgewidth = 0)
 
 
 
@@ -224,3 +227,74 @@ def NameCluster(Data,Name=None, Return = None):
 
     else:
         return Data
+
+
+def PrincipalComponentAnalysis(DataEntry, Oxide, Cluster = None, number_of_components = None):
+    """
+    Perform principal component analysis.
+
+    Parameters:
+    ----------
+    DataEntry: dict, required
+        Python dictionary containing numpy arrays for each element and a numpy array containing the cluster information.
+
+    Oxide: list, required
+        Elements or Oxides to be included in the PCA analysis.
+
+    Cluster: string, optional
+        Cluster to be used if the idea is to only focus on one sample.
+
+    number_of_components: float, optional
+        number of components for PCA. default is 2.
+
+    Returns:
+    ----------
+    Data: dict,
+        Python dictionary
+
+    """
+
+    Data = DataEntry.copy()
+
+    if number_of_components is None:
+        number_of_components = 2
+
+    for k in Oxide:
+        Data[k] = np.nan_to_num(Data[k], nan = 0.0)
+
+    minmaxscaler = MinMaxScaler()
+
+    Dat=[]
+    i=0
+    for ox in Oxide:
+        if Cluster is None:
+            A = MinMaxScaler().fit_transform(Data[ox]).flatten()
+            if i==0:
+                Dat = A
+                i=1
+            else:
+                Dat = np.vstack((Dat, A))
+        if Cluster is not None:
+            A = MinMaxScaler().fit_transform(Data[ox][np.where(Data['Cluster'] == Cluster)].reshape(len(Data['Cluster'][np.where(Data['Cluster'] == Cluster)]),1)).flatten()
+            if i==0:
+                Dat = A
+                i=1
+            else:
+                Dat = np.vstack((Dat, A))
+
+    pca = PCA(n_components = number_of_components)
+    principalComponents = pca.fit_transform(Dat.T)
+
+    for i in range(number_of_components):
+        if Cluster is None:
+            B = principalComponents[:,i]
+
+        if Cluster is not None:
+            B = np.zeros(len(Data['Cluster'].flatten()))
+            B[np.where(Data['Cluster'].flatten() == Cluster)] = principalComponents[:,0]
+            if type(Cluster) == type('str'):
+                Data[Cluster + '_PCA ' + str(i+1)] = B.reshape(np.shape(Data['Cluster']))
+            else:
+                Data[str(Cluster) + '_PCA ' + str(i+1)] = B.reshape(np.shape(Data['Cluster']))
+
+    return Data

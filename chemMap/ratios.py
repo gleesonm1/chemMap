@@ -208,7 +208,7 @@ def ApparentRatio(counts, ratio = None):
 
     return counts
 
-def detRatio(counts, Elements, corr = None, ratio = None):
+def detRatio(cnts, Elements, corr = None, ratio = None):
     """
     Calculates the concentration (or ratio) from normalise, h-factor multiplied data. Load raw count data and the normalisation will be done here.
 
@@ -231,17 +231,19 @@ def detRatio(counts, Elements, corr = None, ratio = None):
     norm: dict
         copy of python dictionary with chosen ratio included
     """
+    counts = cnts.copy()
+
     if ratio == 'Mg#' or 'Cr#' or 'An' or 'AnK':
         counts = ApparentRatio(counts, ratio = ratio)
 
     norm = Norm(counts, Elements)
 
-    norm = AZ_calc(norm, Elements)
+    #norm = AZ_calc(norm, Elements)
 
-    h_Factor = h_factor(norm, Elements)
+    #h_Factor = h_factor(norm, Elements)
 
-    for el in Elements:
-        norm[el]=norm[el]*h_Factor
+    #for el in Elements:
+    #    norm[el]=norm[el]#*h_Factor
 
     if ratio is None:
         ratio = 'Mg#'

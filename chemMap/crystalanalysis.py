@@ -16,7 +16,7 @@ from scipy.ndimage import label
 from scipy.ndimage import find_objects
 from .elements import element_properties
 
-def Section(Data,a,Element,Resolution,Cluster=None):
+def Section(DataEntry,a,Element,Resolution,Cluster=None):
     """
     Function used to extract a transect from an element or ratio map. Code will prompt the user to place three 'clicks' on the map. The first two define the start and end of the transect and the third defines the width.
 
@@ -49,6 +49,9 @@ def Section(Data,a,Element,Resolution,Cluster=None):
     A second plot is produced where the top graph displays the element vs distance relationship for every point included in the transect. The bottom graph then provides a moving average calculation along that transect (average all points within a Distance of +/- 2*Resolution), with the shaded region displaying the 2*sigma variation around that mean.
 
     """
+
+    Data = DataEntry.copy()
+
     print('Click twice to define the start and the end of the chosen transect, and once to define the width of the area to consider')
     pts = np.asarray(plt.ginput(3, timeout=-1)) # it will wait for three clicks
     x1,y1=pts[0,:]
@@ -84,7 +87,7 @@ def Section(Data,a,Element,Resolution,Cluster=None):
     Tr=pd.DataFrame()
     for ox in Data.keys():
         Tr[ox]=np.zeros(len(_Y.flatten()))
-        A = Data[ox]
+        A = Data[ox].copy()
         if Cluster is not None:
             A[np.where(Data['Cluster'] != Cluster)] = np.nan
         Tr[ox]=A[(_Y.flatten().astype(int)),(_X.flatten().astype(int))]
