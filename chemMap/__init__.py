@@ -33,4 +33,6 @@ from chemMap.elementmap import *
 from chemMap.crystalanalysis import *
 # This contains code required calculate molar ratios from the available data
 from chemMap.ratios import *
+# This contains code required to load standards and compute calibration curves
+from chemMap.quant import *
 

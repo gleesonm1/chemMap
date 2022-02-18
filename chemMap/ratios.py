@@ -48,13 +48,13 @@ def calcRatios(Dat, oxide = None, ratios = None, numerator = None, denominator =
         if ratios is not None:
             for r in ratios:
                 if r == 'Mg#':
-                    Data[r] = (Data['MgO']/40.3044)/(Data['FeO']/71.844+Data['MgO']/40.3044)*100
+                    Data[r] = (Data['MgO']/40.3044)/(Data['FeO']/71.844+Data['MgO']/40.3044)
 
                 if r == 'An':
-                    Data[r] = (Data['CaO']/56.0774)/(Data['CaO']/56.0774+2*Data['Na2O']/61.9789)*100
+                    Data[r] = (Data['CaO']/56.0774)/(Data['CaO']/56.0774+2*Data['Na2O']/61.9789)
 
                 if r == 'AnK':
-                    Data[r] = (Data['CaO']/56.0774)/(Data['CaO']/56.0774+2*Data['Na2O']/61.9789+2*Data['K2O']/94.2)*100
+                    Data[r] = (Data['CaO']/56.0774)/(Data['CaO']/56.0774+2*Data['Na2O']/61.9789+2*Data['K2O']/94.2)
 
                 if r == 'Cr#':
                     Data[r] = (Data['Cr2O3']/(element_properties['Cr'][3]*element_properties['Cr'][2]+element_properties['Cr'][4]*15.999))/(Data['Cr2O3']/(element_properties['Cr'][3]*element_properties['Cr'][2]+element_properties['Cr'][4]*15.999) + Data['Al2O3']/(element_properties['Al'][3]*element_properties['Al'][2]+element_properties['Al'][4]*15.999))
@@ -122,13 +122,13 @@ def Norm(Data, Oxide):
     for ox in Oxide:
         sum_ox = sum_ox + Data[ox]
 
-    norm=Data
+    norm=Data.copy()
     for ox in Oxide:
         norm[ox] = Data[ox]/sum_ox
 
     return norm
 
-def AZ_calc(norm, Elements):
+def AZ_calc(norm_entry, Elements):
     """
     Calculate the mean atomic number and atomic weight of each pixel.
 
@@ -146,6 +146,18 @@ def AZ_calc(norm, Elements):
         Also now includes numpy arrays for mean A and Z of each pixel
     """
 
+    norm = norm_entry.copy()
+
+    O = np.zeros(np.shape(norm[Elements[0]]))
+    for el in Elements:
+        dummy = norm[el]*(element_properties[el][2]*element_properties[el][3] + element_properties['O'][2]*element_properties[el][4])/(element_properties[el][2]*element_properties[el][3])
+        O = O + (dummy - norm[el])
+    norm['O'] = O
+
+    Elements.append('O')
+
+    norm = Norm(norm, Elements)
+
     A = np.zeros(np.shape(norm[Elements[0]]))
     Z = np.zeros(np.shape(norm[Elements[0]]))
 
@@ -158,9 +170,28 @@ def AZ_calc(norm, Elements):
 
     return norm
 
-def h_factor(norm, Elements):
+def h_factor(norm):
     """
     Calculates a h-factor for every pixel
+
+    Parameters:
+    ----------
+    norm: dict
+        Python dictionary of normalised data
+
+    Returns:
+    ----------
+    h-factor: numpy array
+        array of the h-factor values
+    """
+
+    h_factor = 1.2 * norm['A']/(norm['Z']**2)
+
+    return h_factor
+
+def h_factor_new(norm_entry, Elements):
+    """
+    Calculate the mean atomic number and atomic weight of each pixel.
 
     Parameters:
     ----------
@@ -172,13 +203,28 @@ def h_factor(norm, Elements):
 
     Returns:
     ----------
-    h-factor: numpy array
-        array of the h-factor values
+    norm: dict
+        Also now includes numpy arrays for mean A and Z of each pixel
     """
 
-    h_factor = 1.2 * norm['A']/(norm['Z']**2)
+    norm = norm_entry.copy()
 
-    return h_factor
+    O = np.zeros(np.shape(norm[Elements[0]]))
+    for el in Elements:
+        dummy = norm[el]*(element_properties[el][2]*element_properties[el][3] + element_properties['O'][2]*element_properties[el][4])/(element_properties[el][2]*element_properties[el][3])
+        O = O + (dummy - norm[el])
+    norm['O'] = O
+
+    Elements.append('O')
+
+    norm = Norm(norm, Elements)
+
+    h = np.zeros(np.shape(norm[Elements[0]]))
+
+    for el in Elements:
+        h = h + norm[el]*(1.2*element_properties[el][2]/(element_properties[el][1]**2))
+
+    return h
 
 def ApparentRatio(counts, ratio = None):
     """

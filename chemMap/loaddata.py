@@ -16,8 +16,9 @@ from sklearn.ensemble import RandomForestClassifier
 from scipy.ndimage import label
 from scipy.ndimage import find_objects
 from .elements import element_properties
+import os
 
-def loadwt(path,Oxide,filter=None):
+def loadwt(path,filter=None):
     """
     Load in quantitative wt% data.
 
@@ -38,12 +39,17 @@ def loadwt(path,Oxide,filter=None):
         Python dictionary containing a numpy array for each element or oxide loaded.
 
     """
+    el_dirs = [d for d in os.listdir(path) if d.endswith(".csv")]
+
     Data={}
-    for ox in Oxide:
-        Data[ox] = np.genfromtxt(path + ox + ' Wt%.csv', delimiter = ',')
-        Data[ox] = np.nan_to_num(Data[ox], copy = False, nan = 0.0) # with 0s rather than NaNs
+    for e in el_dirs:
+        i = np.genfromtxt(path + e, delimiter = ',')
+        for j in list(element_properties.keys()):
+            if e.split(" ",1)[0] == j:
+                e = j
+        Data[e] = np.nan_to_num(i[:,0:-1], copy = False)
         if filter is not None:
-            Data[ox] = nd.median_filter(Data[ox], size=3)
+            Data[e] = nd.median_filter(Data[e], size = 3)
 
     return Data
 
@@ -77,7 +83,7 @@ def loadcnt(path,Oxide,filter=None):
 
     return Data
 
-def calcOxides(Data, Oxide):
+def calcOxides(Data, Oxide, Copy = None):
     """
     Convert element wt% data to oxide wt% data
 
@@ -89,24 +95,72 @@ def calcOxides(Data, Oxide):
     Oxide: list, required
         List containing the elements that the user wishes to convert into oxide concentrations.
 
+    Copy: str, optional
+        True or False. Default False.
+
     Returns:
     ----------
     Quant_ox: dict
         Python dictionary with a numpy array for each oxide specified by the user.
 
     """
-    Quant_ox = {}
-    for ox in Oxide:
-        if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
-            Quant_ox[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-        if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
-            Quant_ox[ox + str(element_properties[ox][3]) + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-        if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
-            Quant_ox[ox + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-        if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
-            Quant_ox[ox + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+    if Copy is None:
+        Quant_ox = {}
+        for ox in Oxide:
+            if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+                Quant_ox[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+            if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+                Quant_ox[ox + str(element_properties[ox][3]) + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+            if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+                Quant_ox[ox + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+            if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+                Quant_ox[ox + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+
+    if Copy is not None:
+        Quant_ox = Data.copy()
+        for ox in Oxide:
+            if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+            if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+            if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+            if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
 
     return Quant_ox
+
+def calcElements(Data, Oxide):
+    """
+    Convert oxide wt% data to element wt% data
+
+    Parameters:
+    ----------
+    Data: dict or pandas dataframe, required
+        Python dictionary containing a numpy array for each element of interest.
+
+    Oxide: list, required
+        List containing the elements that the user wishes to convert into oxide concentrations.
+
+    Returns:
+    ----------
+    Quant_ox: dict or pandas dataframe
+        Python dictionary with a numpy array for each oxide specified by the user.
+
+    """
+
+    Quant_el = Data.copy()
+    for ox in Oxide:
+        if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+            Quant_el[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3])/(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])
+        if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+            Quant_el[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3])/(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])
+        if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+            Quant_el[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3])/(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])
+        if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+            Quant_el[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3])/(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])
+
+    return Quant_el
 
 def loadtransect(path, Oxide):
     """

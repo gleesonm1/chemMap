@@ -19,6 +19,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from .elements import element_properties
 from sklearn.decomposition import PCA
+import matplotlib as mpl
 
 def Cluster(Data,Oxide,number_of_clusters, Plot = None, Cluster = None, Name = None, ShowComp = None):
     """
@@ -120,7 +121,7 @@ def Cluster(Data,Oxide,number_of_clusters, Plot = None, Cluster = None, Name = N
 
     return Data
 
-def PlotCluster(Data, number_of_clusters, Name = None, Cluster = None):
+def PlotCluster(Dat, Name = None, background = None):
     """
     Plot the different clusters.
 
@@ -143,45 +144,59 @@ def PlotCluster(Data, number_of_clusters, Name = None, Cluster = None):
         matplotlib subplot
 
     """
-    Oxide = list(Data.keys())
-    X_1=np.linspace(0,np.shape(Data[Oxide[0]])[1]-1, np.shape(Data[Oxide[0]])[1])
-    Y_1=np.linspace(0,np.shape(Data[Oxide[0]])[0]-1, np.shape(Data[Oxide[0]])[0])
+    Data = Dat.copy()
+
+    number_of_clusters = len(list(np.unique(Data['Cluster'])))
+    if Name is not None:
+        if 'nan' in list(np.unique(Data['Cluster'])):
+            number_of_clusters = number_of_clusters - 1
+
+
+    X_1=np.linspace(0,np.shape(Data['Cluster'])[1]-1, np.shape(Data['Cluster'])[1])
+    Y_1=np.linspace(0, np.shape(Data['Cluster'])[0]-1, np.shape(Data['Cluster'])[0])
     X, Y = np.meshgrid(X_1, Y_1)
 
-    f, a = plt.subplots(1, 1, figsize=(15*X[-1,-1]/X[-1,-1],15*Y[-1,-1]/X[-1,-1]))#(15,15*Y[-1,-1]/X[-1,-1]))
-    a.axis('off')
-    a.set_aspect('equal')
+    f = plt.figure()
+    f.set_size_inches(8, 8*len(Y_1)/len(X_1))
+    if background is not None:
+        a = f.add_subplot(111, aspect = "equal")
+        a.patch.set_facecolor('k')
+    else:
+        a = f.add_subplot(111, aspect = "equal")
 
-    a.set_xlim([0,len(X_1)])
-    a.set_ylim([0,len(Y_1)])
+    a.get_xaxis().set_visible(False)
+    a.get_yaxis().set_visible(False)
+    a.invert_yaxis()
 
-    H = f.get_figheight()
-    W = f.get_figwidth()
-    dpi = f.get_dpi()
+    # cmap = plt.get_cmap('viridis')
+    # cmap = cmap(np.linspace(0,1,number_of_clusters))
 
-    marker = (dpi*W)/(len(X_1))
+    if Name is not None:
+        Clusters = list(np.unique(Data['Cluster']))
+        A = np.zeros(np.shape(Data['Cluster']))
+        i=0
+        for C in Clusters:
+            if C != 'nan':
+                A[np.where(Data['Cluster'] == C)] = i
+                i = i+1
+            else:
+                A[np.where(Data['Cluster'] == C)] = 'nan'
+
+    else:
+        A = Data['Cluster']
 
     cmap = plt.get_cmap('viridis')
-    cmap = cmap(np.linspace(0,1,number_of_clusters))
+    if Name is not None:
+        cmap = cmap(np.linspace(0,1,number_of_clusters))
+        i=0
+        for C in Clusters:
+            if C != 'nan':
+                a.plot(1,1, 's', markerfacecolor = cmap[i][0:3], markeredgecolor = 'none', markersize = 10, label = C, zorder = 0)
+                i=i+1
 
-    if Cluster is None:
-        for i in range(number_of_clusters):
-            if Name is None:
-                a.plot(X[np.where(Data['Cluster'] == i)],Y[np.where(Data['Cluster'] == i)],'s', color = cmap[i], markeredgecolor = cmap[i], markersize = marker, label = "Cluster" + str(i), markeredgewidth = 0)
-            else:
-                if Name[i] == 'nan':
-                    a.plot(X[np.where(Data['Cluster'] == Name[i])],Y[np.where(Data['Cluster'] == Name[i])],'s', color = 'k', markeredgecolor = 'k', markersize = marker, label = Name[i], markeredgewidth = 0)
-                else:
-                    a.plot(X[np.where(Data['Cluster'] == Name[i])],Y[np.where(Data['Cluster'] == Name[i])],'s', color = cmap[i], markeredgecolor = cmap[i], markersize = marker, label = Name[i], markeredgewidth = 0)
+    z1 = a.pcolormesh(X, Y, A, cmap = 'viridis', zorder = 2, shading = 'auto')
 
-        a.legend(markerscale = 10)
-
-    if Cluster is not None:
-        for i in range(number_of_clusters):
-            if Name is None:
-                a.plot(X[np.where(Data['Cluster_'+str(Cluster)] == i)],Y[np.where(Data['Cluster_'+str(Cluster)] == i)],'s', color = cmap[i], markeredgecolor = 'k', markersize = marker, markeredgewidth = 0)
-
-
+    a.legend(loc = "upper right")
 
     plt.show()
 
@@ -211,8 +226,10 @@ def NameCluster(Data,Name=None, Return = None):
     Nm=np.array(['nan']*(np.max(Data['Cluster'])+1))
     for i in range(0,np.max(Data['Cluster'])+1):
         if Name is None:
+            P = pd.DataFrame(columns = Oxide, data = np.zeros(np.shape([Oxide])))
             for ox in Oxide:
-                print('Cluster ' + str(i) + ',' + ox + ' = '+ str(round(np.nanmean(np.nanmean(Data[ox][np.where(Data['Cluster']==i)])),2)))
+                P[ox] = round(np.nanmean(Data[ox][Data['Cluster']==i]),2)
+            print(P)
             N=input("Type a three letter identification code for this cluster: \n")
         else:
             N=Name[i]
@@ -268,14 +285,14 @@ def PrincipalComponentAnalysis(DataEntry, Oxide, Cluster = None, number_of_compo
     i=0
     for ox in Oxide:
         if Cluster is None:
-            A = MinMaxScaler().fit_transform(Data[ox]).flatten()
+            A = minmaxscaler.fit_transform(Data[ox]).flatten()
             if i==0:
                 Dat = A
                 i=1
             else:
                 Dat = np.vstack((Dat, A))
         if Cluster is not None:
-            A = MinMaxScaler().fit_transform(Data[ox][np.where(Data['Cluster'] == Cluster)].reshape(len(Data['Cluster'][np.where(Data['Cluster'] == Cluster)]),1)).flatten()
+            A = minmaxscaler.fit_transform(Data[ox][np.where(Data['Cluster'] == Cluster)].reshape(len(Data['Cluster'][np.where(Data['Cluster'] == Cluster)]),1)).flatten()
             if i==0:
                 Dat = A
                 i=1

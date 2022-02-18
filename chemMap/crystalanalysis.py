@@ -112,7 +112,7 @@ def Section(DataEntry,a,Element,Resolution,Cluster=None):
     b[0].set_ylabel(Element)
 
     b[1].plot(L,Av,'-k',linewidth=2,zorder=1)
-    b[1].fill(np.array([L,np.flip(L)]).flatten(),np.array([Av-St,np.flip(Av)+St]).flatten(),color="lightgrey")
+    b[1].fill(np.array([L,np.flip(L)]).flatten(),np.array([Av-St,np.flip(Av)+np.flip(St)]).flatten(),color="lightgrey")
     b[1].set_ylabel(Element)
 
     plt.show()
@@ -150,3 +150,46 @@ def Size(Data,Cluster=None):
     Data['Size'][np.where(SizeAnalysis==0)]=0
 
     return Data
+
+def PointComp(DataEntry, subaxes = None, clicks = None, Element = None, Cluster = None, size = None, text = None):
+    Data = DataEntry.copy()
+
+    if clicks is None:
+        clicks = 1
+
+    if size is None:
+        size = 5
+
+    print('Click ' + str(clicks) + ' times to select the point compositions you want to extract')
+    pts = np.asarray(plt.ginput(clicks, timeout=-1))
+
+    if Element is None:
+        Element = list(Data.keys())
+        if 'Cluster' in Element:
+            Element.remove('Cluster')
+
+    Results = pd.DataFrame(data = np.zeros((clicks, len(Element))), columns = Element)
+
+    for i in range(clicks):
+        x, y = pts[i,:]
+        for E in Element:
+            if Cluster is None:
+                Data[E] = DataEntry[E].copy()
+                Results[E].loc[i] = np.nanmean(Data[E][np.ix_(np.linspace(round(y) - (size-1)/2,round(y)+(size-1)/2,size).astype(int),np.linspace(round(x)-(size-1)/2,round(x)+(size-1)/2,size).astype(int))])
+            if Cluster is not None:
+                Data[E] = DataEntry[E].copy()
+                Data[E][np.where(Data['Cluster'] != Cluster)] = np.nan
+                Results[E].loc[i] = np.nanmean(Data[E][np.ix_(np.linspace(round(y) - (size-1)/2,round(y)+(size-1)/2,size).astype(int),np.linspace(round(x)-(size-1)/2,round(x)+(size-1)/2,size).astype(int))])
+
+        if subaxes is not None:
+            subaxes.fill([round(x)-(size-1)/2, round(x)-(size-1)/2, round(x)+(size-1)/2, round(x)+(size-1)/2, round(x)-(size-1)/2],[round(y)-(size-1)/2, round(y)+(size-1)/2, round(y)+(size-1)/2, round(y)-(size-1)/2, round(y)-(size-1)/2], color = [1,1,1], alpha = 0.8, zorder = 10)
+            if text is not None:
+                if text != 'count':
+                    subaxes.text(round(x)+(size)/2, round(y)+(size)/2, text + '=' + str(round(Results[text].loc[i],2)), zorder = 11, c = 'r', fontsize = 14, fontweight = 'bold')
+                else:
+                    subaxes.text(round(x)+(size)/2, round(y)+(size)/2, str(i), zorder = 11, c = 'w', fontsize = 14, fontweight = 'bold', backgroundcolor = 'k')
+
+
+
+    return Results
+
