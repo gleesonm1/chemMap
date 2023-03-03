@@ -1,7 +1,3 @@
-__version__ = "0.1"
-__author__ = 'Matthew Gleeson'
-
-
 import matplotlib.pyplot as plt
 import math
 import pandas as pd
