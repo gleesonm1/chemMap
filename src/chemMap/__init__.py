@@ -32,3 +32,5 @@ from chemMap.ratios import *
 # This contains code required to load standards and compute calibration curves
 from chemMap.quant import *
 
+# version
+from ._version import __version__
