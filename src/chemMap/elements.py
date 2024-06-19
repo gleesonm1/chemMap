@@ -26,7 +26,12 @@ mineral_properties = {
     'Cpx': ('clinopyroxene', 3.4),
     'Opx': ('orthopyroxene', 3.35),
     'Plg': ('plagioclase', 2.7),
-    'Spl': ('spinel', 4.72)}
+    'Spl': ('spinel', 4.72),
+    'Olivine': ('olivine', 3.5),
+    'Clinopyroxene': ('clinopyroxene', 3.4),
+    'Orthopyroxene': ('orthopyroxene', 3.35),
+    'Plagioclase': ('plagioclase', 2.7),
+    'Spinel': ('spinel', 4.05)} # 4.72
 
 
 # correction models for ratio (and element) quantification. Determined through analysis of a wide databse of mineral and metal standards (see Locke, 2017 for details).

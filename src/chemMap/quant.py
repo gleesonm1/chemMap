@@ -29,14 +29,14 @@ def fit_func_bkg(x, a, c):
 
 
 ## load standards and create calibration
-def create_calibration(path, matrix_correction = None, background_correction = None, std_datatype = None):
+def create_calibration(path, matrix_correction = None, background_correction = None, std_datatype = None, apply_correction = True):
     """
     create calibration curves from each element in the calibration dataset
     """
     Minerals = load_standards(path)
     Stds = true_comp(path+'Standards.xlsx', std_datatype = std_datatype)
 
-    Stds_raw, base_corr, base_inte = cal_params(Minerals, Stds, matrix_correction = matrix_correction, background_correction = background_correction)
+    Stds_raw, base_corr, base_inte = cal_params(Minerals, Stds, matrix_correction = matrix_correction, background_correction = background_correction, apply_correction = apply_correction)
 
     return Minerals, Stds, Stds_raw, base_corr, base_inte
 
@@ -62,22 +62,27 @@ def true_comp(file, std_datatype = None):
 
     return Stds
 
-def cal_params(Minerals, Stds, matrix_correction = None, background_correction = None):
+def cal_params(Minerals, Stds, matrix_correction = None, background_correction = None, apply_correction=True):
     Stds_raw = standard_average(Stds, Minerals)
 
     base_corr = dict.fromkeys(Stds.columns[2:-1])
     base_inte = base_corr.copy()
 
     for e in base_corr:
-        if background_correction is None:
-            params = curve_fit(fit_func, Stds[e][Stds['Calibrate'] == 'Y'], Stds_raw[e][Stds_raw['Calibrate'] == 'Y'])
+        if apply_correction is True:
+            if background_correction is None:
+                params = curve_fit(fit_func, Stds[e][Stds['Calibrate'] == 'Y'], Stds_raw[e][Stds_raw['Calibrate'] == 'Y'])
+                base_inte[e] = 0
+
+            if background_correction is not None:
+                params = curve_fit(fit_func_bkg, Stds[e][Stds['Calibrate'] == 'Y'], Stds_raw[e][Stds_raw['Calibrate'] == 'Y'])
+                base_inte[e] = params[0][1]
+                
+            base_corr[e] = params[0][0]
+        else:
             base_inte[e] = 0
+            base_corr[e] = 1
 
-        if background_correction is not None:
-            params = curve_fit(fit_func_bkg, Stds[e][Stds['Calibrate'] == 'Y'], Stds_raw[e][Stds_raw['Calibrate'] == 'Y'])
-            base_inte[e] = params[0][1]
-
-        base_corr[e] = params[0][0]
 
     return Stds_raw, base_corr, base_inte
 
@@ -113,78 +118,190 @@ def check_stds(Minerals, base_corr, base_inte, matrix_correction = None):
 ## plot standards results
 
 def plot_std_corr(Stds, Stds_raw, el, base_corr, base_inte, matrix_correction = None, MFC = None):
-    f, a = plt.subplots(np.shape(el)[0], np.shape(el)[1])
+    f, a = plt.subplots(np.shape(el)[0], np.shape(el)[1], figsize = (10,9))
     for i in range(np.shape(el)[0]):
         for j in range(np.shape(el)[1]):
             if MFC is None:
                 a[i][j].plot(Stds[el[i][j]], Stds_raw[el[i][j]], 'ok')
             else:
                 for s in MFC:
-                    a[i][j].plot(Stds[el[i][j]][Stds['Mineral'] == s], Stds_raw[el[i][j]][Stds_raw['Mineral'] == s], 'ok', markerfacecolor = MFC[s])
+                    a[i][j].plot(Stds[el[i][j]][Stds['Mineral'] == s], 
+                                 (Stds_raw[el[i][j]][Stds_raw['Mineral'] == s]-base_inte[el[i][j]])/base_corr[el[i][j]], 'ok', markerfacecolor = MFC[s], label = s)
 
             x_fit = np.array([np.nanmin(Stds[el[i][j]]), np.nanmax(Stds[el[i][j]])])
             y_fit = x_fit*base_corr[el[i][j]]+base_inte[el[i][j]]
 
-            a[i][j].plot(x_fit,y_fit, '--')
-            a[i][j].set_ylabel('Raw data')
-            a[i][j].set_xlabel(el[i][j] + ' wt%')
+            a[i][j].plot(x_fit,x_fit, '--')
+            a[i][j].set_ylabel('Measured Value ' + el[i][j] + ' wt%')
+            a[i][j].set_xlabel('Preferred Value ' + el[i][j] +  ' wt%')
 
-def plot_std_comparison(Conc, Stds, el, Group = None):
+    if MFC is not None:
+        a[i][j].legend()
+
+    f.tight_layout()
+
+def plot_std_offset(Stds, Stds_raw, el, base_corr, base_inte, MFC = None):
+    f, a = plt.subplots(np.shape(el)[0], np.shape(el)[1], figsize = (10,9))
+    for i in range(np.shape(el)[0]):
+        for j in range(np.shape(el)[1]):
+            if MFC is None:
+                a[i][j].plot(Stds[el[i][j]], 100*(Stds_raw[el[i][j]]-Stds[el[i][j]])/Stds[el[i][j]], 'ok')
+            else:
+                for s in MFC:
+                    a[i][j].plot(Stds[el[i][j]][Stds['Mineral'] == s], 
+                                 100*((Stds_raw[el[i][j]][Stds_raw['Mineral'] == s]-base_inte[el[i][j]])/base_corr[el[i][j]] - Stds[el[i][j]][Stds['Mineral'] == s])/Stds[el[i][j]][Stds['Mineral'] == s], 'ok', markerfacecolor = MFC[s], label = s)
+
+            x_fit = np.array([np.nanmin(Stds[el[i][j]]), np.nanmax(Stds[el[i][j]])])
+
+            a[i][j].plot(x_fit,np.array([0,0]), '--')
+            a[i][j].set_ylabel('Offset (%)')
+            a[i][j].set_xlabel('Preferred Value ' + el[i][j] +  ' wt%')
+
+            a[i][j].set_ylim([-15,15])
+
+    if MFC is not None:
+        a[i][j].legend()
+
+    f.tight_layout()
+
+def plot_std_comparison(Conc, Stds, el, Group = None, output = False, save_fig=None):
+    if output is True:
+        Single = pd.DataFrame(columns = np.unique(el), index = Stds['Standard'], data = np.zeros((len(Stds['Standard']), len(np.unique(el)))))
+        if Group is not None:
+            Multi = pd.DataFrame(columns = np.unique(el), index = Stds['Standard'], data = np.zeros((len(Stds['Standard']), len(np.unique(el)))))
+
     for s in Conc:
         f, d = plt.subplots(3,3, figsize = (10,8))
         f.suptitle(s)
         for i in range(np.shape(el)[0]):
             for j in range(np.shape(el)[1]):
-                axx = d[i][j].hist(Conc[s][el[i][j]].flatten(), density = True, bins = 20, alpha = 0.6)
+                axx = d[i][j].hist(Conc[s][el[i][j]].flatten(), density = True, bins = 20, alpha = 0.6, label = 'Single Pixel')
 
                 if Group is not None:
                     A = np.zeros(Group*50)
                     for k in range(Group*50):
-                        A[k] = np.nanmean(np.random.choice(Conc[s][el[i][j]].flatten(), size = Group, replace = False))
+                        A[k] = np.nanmean(np.random.choice(Conc[s][el[i][j]].flatten(), size = Group, replace = True))
 
-                    d[i][j].hist(A, density = True, bins = 10, alpha = 0.6, color = 'red')
+                    d[i][j].hist(A, density = True, bins = 10, alpha = 0.6, color = 'red', label = str(Group) + ' Pixels')
 
                 d[i][j].plot([Stds[el[i][j]][Stds['Standard'] == s],
                               Stds[el[i][j]][Stds['Standard'] == s]],
                             [0, np.max(axx[0])], '--k')
+                
+                if output is True:
+                    Single.loc[s, el[i][j]] = np.nanstd(Conc[s][el[i][j]].flatten())
+                    if Group is not None:
+                        Multi.loc[s, el[i][j]] = np.nanstd(A)
+
+                d[i][j].set_ylabel('Density')
+                d[i][j].set_xlabel(el[i][j] + ' wt%')
 
                 # if s == 'Diopside':
                 #     if el[i][j] == 'Ca':
                 #         print(np.nanstd(A)/np.nanmean(A))
                 #         print(np.nanstd(Conc[s][el[i][j]].flatten())/np.nanmean(Conc[s][el[i][j]].flatten()))
+        d[i][j].legend()
+        f.tight_layout()
 
+        if save_fig is not None:
+            plt.savefig(save_fig + s + '.svg', format = "svg", dpi = 600)
+
+    if output is True:
+        if Group is not None:
+            return Single, Multi
+        else:
+            return Single
 
 ## calc whole-rock
-def wholerock(Data, Oxide, X = None, iterations = None):
-    ForWR = pd.DataFrame()
-    for E in list(Data.keys()):
-        ForWR[E] = Data[E][Data['Cluster'] != 'nan'].flatten()
+def wholerock(Data, Oxide, X = 0.4, iterations = None):
+    if iterations is not None:
+        WR = pd.DataFrame(columns = Oxide, data = np.zeros((iterations, len(Oxide))))
+        
+        # find total length that is not classified as 'nan'
+        if "Cluster" in Data.keys():
+            L = len(Data['SiO2'][Data['Cluster'] != 'nan'].flatten())
+        elif "Mineral" in Data.keys():
+            L = len(Data['SiO2'][Data['Mineral'] != 'nan'].flatten())
 
-    A = np.array([None]*len(ForWR[E]))
+        for i in range(iterations):
+            L_new = 0
+            while L_new < X*L:
+                Dat = Data.copy()
+                X_min = np.random.randint(0, np.shape(Dat['SiO2'])[1])
+                X_max = np.random.randint(X_min + round((np.shape(Dat['SiO2'])[1] - X_min)/4), np.shape(Dat['SiO2'])[1])
+                Y_min = np.random.randint(0, np.shape(Dat['SiO2'])[0])
+                Y_max = np.random.randint(Y_min + round((np.shape(Dat['SiO2'])[0] - Y_min)/4), np.shape(Dat['SiO2'])[0])
 
-    for C in np.unique(ForWR['Cluster']):
-        A[np.where(ForWR['Cluster'] == C)] = mineral_properties[C][1]
+                # Create the mask for the box
+                if "Cluster" in Dat.keys():
+                    mask = np.zeros_like(Dat['Cluster'], dtype=bool)
+                    mask[Y_min:Y_max+1, X_min:X_max+1] = True
 
-    ForWR['rho'] = A
+                    # Set values outside the box to 'nan'
+                    Dat['Cluster'] = np.where(mask, Dat['Cluster'], 'nan')
 
-    if X is None:
-        WR = pd.DataFrame(columns = Oxide, data = np.zeros((1,len(Oxide))))
-        for E in Oxide:
-            WR[E].loc[0] = np.nansum(ForWR[E]*ForWR['rho'])/np.nansum(ForWR['rho'])
+                    L_new = len(Dat['SiO2'][Dat['Cluster'] != 'nan'].flatten())
 
-    if X is not None:
-        Num = round(len(ForWR[E])*X)
-        if iterations is None:
-            WR = pd.DataFrame(columns = Oxide, data = np.zeros((1, len(Oxide))))
-            idx = np.random.choice(np.linspace(0,len(ForWR[E])-1,len(ForWR[E])), round(len(ForWR[E]*X)), replace = False).astype(int)
+                if "Mineral" in Dat.keys():
+                    mask = np.zeros_like(Dat['Mineral'])
+                    mask[Y_min:Y_max+1, X_min:X_max+1] = True
+
+                    # Set values outside the box to 'nan'
+                    Dat['Mineral'] = np.where(mask, Dat['Mineral'], 'nan')
+
+                    L_new = len(Dat['SiO2'][Dat['Mineral'] != 'nan'].flatten())
+
+            
+            
+            ForWR = pd.DataFrame()
+            for E in list(Dat.keys()):
+                if "Cluster" in Dat.keys():
+                    ForWR[E] = Dat[E][Dat['Cluster'] != 'nan'].flatten()
+                elif "Mineral" in Dat.keys():
+                    ForWR[E] = Dat[E][Dat['Mineral'] != 'nan'].flatten()
+
+            A = np.zeros(len(ForWR[E]))
+
+            if "Cluster" in Dat.keys():
+                for C in np.unique(ForWR['Cluster']):
+                    A[np.where(ForWR['Cluster'] == C)] = mineral_properties[C][1]
+            elif "Mineral" in Dat.keys():
+                for C in np.unique(ForWR['Mineral']):
+                    if C in mineral_properties:
+                        A[np.where(ForWR['Mineral'] == C)] = mineral_properties[C][1]
+
+            ForWR['rho'] = A
+
             for O in Oxide:
-                WR[O].loc[0] = np.nansum(ForWR[O].values[np.ix_(idx)]*ForWR['rho'].values[np.ix_(idx)])/np.nansum(ForWR['rho'].values[np.ix_(idx)])
-        if iterations is not None:
-            WR = pd.DataFrame(columns = Oxide, data = np.zeros((iterations, len(Oxide))))
-            for i in range(iterations):
-                idx = np.random.choice(np.linspace(0,len(ForWR[E])-1,len(ForWR[E])), round(len(ForWR[E])*X), replace = False).astype(int)
-                for O in Oxide:
-                    WR[O].loc[i] = np.nansum(ForWR[O].values[np.ix_(idx)]*ForWR['rho'].values[np.ix_(idx)])/np.nansum(ForWR['rho'].values[np.ix_(idx)])
+                WR[O].loc[i] = np.nansum(ForWR[O].values*ForWR['rho'].values)/np.nansum(ForWR['rho'].values)
+
+    else:
+        WR = pd.DataFrame(columns = Oxide, data = np.zeros((1, len(Oxide))))
+
+        Dat = Data.copy()
+        ForWR = pd.DataFrame()
+        for E in list(Dat.keys()):
+            if "Cluster" in Dat.keys():
+                ForWR[E] = Dat[E][Dat['Cluster'] != 'nan'].flatten()
+            elif "Mineral" in Dat.keys():
+                ForWR[E] = Dat[E][Dat['Mineral'] != 'nan'].flatten()
+
+        A = np.zeros(len(ForWR[E]))
+
+        if "Cluster" in Dat.keys():
+            for C in np.unique(ForWR['Cluster']):
+                A[np.where(ForWR['Cluster'] == C)] = mineral_properties[C][1]
+        elif "Mineral" in Dat.keys():
+            for C in np.unique(ForWR['Mineral']):
+                if C in mineral_properties:
+                    A[np.where(ForWR['Mineral'] == C)] = mineral_properties[C][1]
+
+        ForWR['rho'] = A
+
+        for O in Oxide:
+            WR[O].loc[0] = np.nansum(ForWR[O].values*ForWR['rho'].values)/np.nansum(ForWR['rho'].values)
+
+
 
     return WR
 

@@ -151,7 +151,7 @@ def Size(Data,Cluster=None):
 
     return Data
 
-def PointComp(DataEntry, subaxes = None, clicks = None, Element = None, Cluster = None, size = None, text = None):
+def PointComp(DataEntry, subaxes = None, clicks = None, Element = None, Phase = None, size = None, text = None):
     Data = DataEntry.copy()
 
     if clicks is None:
@@ -167,18 +167,20 @@ def PointComp(DataEntry, subaxes = None, clicks = None, Element = None, Cluster 
         Element = list(Data.keys())
         if 'Cluster' in Element:
             Element.remove('Cluster')
+        if 'Mineral' in Element:
+            Element.remove('Mineral')
 
     Results = pd.DataFrame(data = np.zeros((clicks, len(Element))), columns = Element)
 
     for i in range(clicks):
         x, y = pts[i,:]
         for E in Element:
-            if Cluster is None:
+            if Phase is None:
                 Data[E] = DataEntry[E].copy()
                 Results[E].loc[i] = np.nanmean(Data[E][np.ix_(np.linspace(round(y) - (size-1)/2,round(y)+(size-1)/2,size).astype(int),np.linspace(round(x)-(size-1)/2,round(x)+(size-1)/2,size).astype(int))])
-            if Cluster is not None:
+            if Phase is not None:
                 Data[E] = DataEntry[E].copy()
-                Data[E][np.where(Data['Cluster'] != Cluster)] = np.nan
+                Data[E][np.where(Data['Mineral'] != Phase)] = np.nan
                 Results[E].loc[i] = np.nanmean(Data[E][np.ix_(np.linspace(round(y) - (size-1)/2,round(y)+(size-1)/2,size).astype(int),np.linspace(round(x)-(size-1)/2,round(x)+(size-1)/2,size).astype(int))])
 
         if subaxes is not None:

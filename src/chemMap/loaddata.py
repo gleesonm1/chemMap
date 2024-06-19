@@ -27,9 +27,6 @@ def loadwt(path,filter=None):
     path: string, required
         path to the location of the data.
 
-    oxide: list, required
-        List of the elements (or oxides) to be extracted from the data folder.
-
     filter: bool, required
         If True, a 3-by-3 median filter will be applied to the data.
 
@@ -55,7 +52,7 @@ def loadwt(path,filter=None):
 
 def loadcnt(path,Oxide,filter=None):
     """
-    Load in raw count data.
+    Load in background corrected count data.
 
     Parameters:
     ----------
