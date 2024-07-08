@@ -137,8 +137,8 @@ def plot_PhaseMap(Data = None, Phases = None, background = 'k', Resolution = Non
         s = "Cluster"
 
     if Phases is None:
-        number_of_clusters = len(list(np.unique(Data[s])))    
-        if "nan" or "NaN" in list(np.unique(Data[s])):
+        number_of_clusters = len(list(np.unique(Dat[s])))    
+        if "nan" or "NaN" in list(np.unique(Dat[s])):
             number_of_clusters = number_of_clusters - 1
     else:
         number_of_clusters = len(Phases)
@@ -169,13 +169,13 @@ def plot_PhaseMap(Data = None, Phases = None, background = 'k', Resolution = Non
 
     if type(Phases) == list:
         cmap = plt.get_cmap('viridis')
-        cmap_p = cmap(np.linspace(0,1,number_of_clusters))
-        i=0
+        # cmap_p = cmap(np.linspace(0,1,number_of_clusters))
+        # i=0
 
-        for C in Phases:
-            if C != 'nan':
-                a.plot(1,1, 's', markerfacecolor = cmap_p[i][0:3], markeredgecolor = 'none', markersize = 10, label = C, zorder = 0)
-                i=i+1
+        # for C in Phases:
+        #     if C != 'nan':
+        #         a.plot(1,1, 's', markerfacecolor = cmap_p[i][0:3], markeredgecolor = 'none', markersize = 10, label = C, zorder = 0)
+        #         i=i+1
 
         #z1 = a.pcolormesh(X, Y, A, cmap = 'viridis', zorder = 2, shading = 'auto')
         a.imshow(A, cmap = cmap, interpolation='none', origin='lower')
