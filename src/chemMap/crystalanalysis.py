@@ -110,11 +110,11 @@ def Section(DataEntry,a,Element,Resolution,Cluster=None, Mineral = None):
         St[i]=2*np.nanstd(Tr[Element][(Tr['Distance']>L[i]-2*Resolution) & (Tr['Distance']<L[i]+2*Resolution)])
 
     f, b = plt.subplots(2,1, figsize=(8,6))
-    b[0].plot(Tr['Distance'],Tr[Element],'ow',markerfacecolor=[0.5,0.5,0.5])
+    b[0].plot(Tr['Distance'],Tr[Element],'ow',markerfacecolor=[0.5,0.5,0.5], zorder = 1)
     b[0].set_ylabel(Element)
 
     b[1].plot(L,Av,'-k',linewidth=2,zorder=1)
-    b[1].fill(np.array([L,np.flip(L)]).flatten(),np.array([Av-St,np.flip(Av)+np.flip(St)]).flatten(),color="lightgrey")
+    b[1].fill(np.array([L,np.flip(L)]).flatten(),np.array([Av-St,np.flip(Av)+np.flip(St)]).flatten(),color="lightgrey", zorder = 0)
     b[1].set_ylabel(Element)
 
     plt.show()
