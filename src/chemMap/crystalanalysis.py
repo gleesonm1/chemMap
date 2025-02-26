@@ -16,7 +16,7 @@ from scipy.ndimage import label
 from scipy.ndimage import find_objects
 from .elements import element_properties
 
-def Section(DataEntry,a,Element,Resolution,Cluster=None):
+def Section(DataEntry,a,Element,Resolution,Cluster=None, Mineral = None):
     """
     Function used to extract a transect from an element or ratio map. Code will prompt the user to place three 'clicks' on the map. The first two define the start and end of the transect and the third defines the width.
 
@@ -90,6 +90,8 @@ def Section(DataEntry,a,Element,Resolution,Cluster=None):
         A = Data[ox].copy()
         if Cluster is not None:
             A[np.where(Data['Cluster'] != Cluster)] = np.nan
+        if Mineral is not None:
+            A[np.where(Data['Mineral'] != Mineral)] = np.nan
         Tr[ox]=A[(_Y.flatten().astype(int)),(_X.flatten().astype(int))]
 
     C=_Y.flatten()-m2*_X.flatten()
@@ -118,6 +120,112 @@ def Section(DataEntry,a,Element,Resolution,Cluster=None):
     plt.show()
 
     return Tr
+
+
+# def Section(Data, a, Element, Resolution, Cluster=None, Mineral=None):
+#     """
+#     Extracts a transect from an element or ratio map based on user-defined clicks.
+
+#     Parameters:
+#     - Data: dict, contains numpy arrays for each element.
+#     - a: matplotlib AxesSubplot containing the element map.
+#     - Element: str, the element or ratio to be plotted.
+#     - Resolution: float, pixel size used to calculate distance.
+#     - Cluster: str/float, optional, specifies which cluster to extract.
+#     - Mineral: str, optional, specifies which mineral to extract.
+
+#     Returns:
+#     - Tr: pandas DataFrame with composition, coordinates, and distance along the transect.
+#     """
+
+#     Data = Data.copy()
+
+#     plt.show()
+#     print('Click twice to define the transect (start and end), then click once to set the width.')
+#     pts = np.asarray(plt.ginput(3, timeout=-1))  # Waits for 3 clicks
+#     x1, y1 = pts[0]
+#     x2, y2 = pts[1]
+#     x3, y3 = pts[2]
+
+#     # Compute slope and perpendicular distance
+#     if x2 == x1:  # Handle vertical line case
+#         m1 = np.inf
+#     else:
+#         m1 = (y2 - y1) / (x2 - x1)
+
+#     c1 = y1 - m1 * x1 if m1 != np.inf else None
+#     m2 = -1 / m1 if m1 != 0 and m1 != np.inf else 0  # Perpendicular slope
+#     c2 = y3 - m2 * x3 if c1 is not None else None
+
+#     # Find projection of (x3, y3) onto the transect
+#     if m1 == np.inf:
+#         x, y = x1, y3
+#     else:
+#         x = (c2 - c1) / (m1 - m2)
+#         y = m1 * x + c1
+
+#     d = np.sqrt((x3 - x) ** 2 + (y3 - y) ** 2)
+
+#     # Plot the transect and rectangle
+#     a.plot([x1, x2], [y1, y2], '-k', linewidth=2, zorder=10)
+#     rect_x = [x1 + d, x1 - d, x2 - d, x2 + d, x1 + d]
+#     rect_y = [y1 - d, y1 + d, y2 + d, y2 - d, y1 - d]
+#     a.plot(rect_x, rect_y, '-w')
+
+#     plt.draw()
+#     plt.show()
+
+#     # Define points along the transect
+#     num_pts = int(np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) + 1)
+#     X1 = np.linspace(x1, x2, num_pts)
+#     Y1 = np.linspace(y1, y2, num_pts)
+
+#     # Define the rectangle's width along the perpendicular
+#     num_width_pts = int(2 * d / Resolution) + 1
+#     _X, _Y = np.meshgrid(X1, np.linspace(y1 - d, y1 + d, num_width_pts))
+#     _X, _Y = _X.flatten(), _Y.flatten()
+
+#     # Clip indices to avoid out-of-bound errors
+#     _X = np.clip(_X.astype(int), 0, Data[Element].shape[1] - 1)
+#     _Y = np.clip(_Y.astype(int), 0, Data[Element].shape[0] - 1)
+
+#     # Extract data
+#     Tr = pd.DataFrame()
+#     for ox in Data.keys():
+#         A = Data[ox].copy()
+#         if Cluster is not None:
+#             A[np.where(Data['Cluster'] != Cluster)] = np.nan
+#         if Mineral is not None:
+#             A[np.where(Data['Mineral'] != Mineral)] = np.nan
+#         Tr[ox] = A[_Y, _X]
+
+#     # Compute distances
+#     Tr['Distance'] = np.sqrt((X1 - x1) ** 2 + (Y1 - y1) ** 2) * Resolution
+#     Tr['X'], Tr['Y'] = _X, _Y
+
+#     # Compute moving average
+#     L = np.linspace(2 * Resolution, np.max(Tr['Distance']) - 2 * Resolution, 
+#                     int(np.round(np.max(Tr['Distance']) / (0.5 * Resolution) + 1)))
+#     Av = np.array([np.nanmean(Tr[Element][(Tr['Distance'] > l - 2 * Resolution) & 
+#                                           (Tr['Distance'] < l + 2 * Resolution)]) for l in L])
+#     St = np.array([2 * np.nanstd(Tr[Element][(Tr['Distance'] > l - 2 * Resolution) & 
+#                                              (Tr['Distance'] < l + 2 * Resolution)]) for l in L])
+
+#     # Plot results
+#     fig, ax = plt.subplots(2, 1, figsize=(8, 6))
+#     ax[0].scatter(Tr['Distance'], Tr[Element], c='gray', marker='o', label='Raw Data')
+#     ax[0].set_ylabel(Element)
+#     ax[0].legend()
+
+#     ax[1].plot(L, Av, '-k', linewidth=2, label='Moving Average')
+#     ax[1].fill_between(L, Av - St, Av + St, color="lightgrey", alpha=0.5)
+#     ax[1].set_ylabel(Element)
+#     ax[1].legend()
+
+#     plt.show()
+    
+#     return Tr
+
 
 def Size(Data,Cluster=None):
     """

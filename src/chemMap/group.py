@@ -23,6 +23,7 @@ import matplotlib as mpl
 from matplotlib.patches import Patch
 from matplotlib.colors import to_rgba
 from matplotlib_scalebar.scalebar import ScaleBar
+from copy import deepcopy
 
 def Cluster(Data,Oxide,number_of_clusters, Plot = None, Cluster = None, Name = None, ShowComp = None):
     """
@@ -124,12 +125,13 @@ def Cluster(Data,Oxide,number_of_clusters, Plot = None, Cluster = None, Name = N
 
     return Data
 
-def plot_PhaseMap(Data = None, Phases = None, background = 'k', Resolution = None, scalebar_loc = "lower right", save_fig = None):
+def plot_PhaseMap(Data = None, Phases = None, background = 'k', Resolution = None, 
+                  scalebar_loc = "lower right", legend_loc = "upper right", save_fig = None):
     """
     Plot the different clusters.
 
     """
-    Dat = Data.copy()
+    Dat = deepcopy(Data)
 
     if "Mineral" in Data.keys():
         s = "Mineral"
@@ -150,6 +152,7 @@ def plot_PhaseMap(Data = None, Phases = None, background = 'k', Resolution = Non
 
     f = plt.figure()
     f.set_size_inches(8, 8*len(Y_1)/len(X_1))
+    f.set_facecolor(background)
     a = f.add_subplot(111, aspect = "equal")
     a.patch.set_facecolor(background)
 
@@ -179,7 +182,7 @@ def plot_PhaseMap(Data = None, Phases = None, background = 'k', Resolution = Non
 
         #z1 = a.pcolormesh(X, Y, A, cmap = 'viridis', zorder = 2, shading = 'auto')
         a.imshow(A, cmap = cmap, interpolation='none', origin='lower')
-        a.legend(loc = "upper right")
+        a.legend(loc = legend_loc)
 
     else:
         rgb_values = np.zeros((np.shape(Data[s])[0], np.shape(Data[s])[1], 3), dtype=float)
@@ -193,7 +196,7 @@ def plot_PhaseMap(Data = None, Phases = None, background = 'k', Resolution = Non
         plt.imshow(rgb_values, interpolation='none', origin='lower')
 
         legend_elements = [Patch(color=to_rgba(color), label=phase) for phase, color in Phases.items()]
-        a.legend(handles=legend_elements, loc='upper right')
+        a.legend(handles=legend_elements, loc=legend_loc)
 
     if Resolution is not None:
         scalebar = ScaleBar(Resolution, "um", length_fraction=0.2, location = scalebar_loc)
@@ -311,7 +314,6 @@ def NameCluster(Data,Name=None, Return = None):
 
     else:
         return Data
-
 
 def PrincipalComponentAnalysis(DataEntry, Oxide, Cluster = None, number_of_components = None):
     """

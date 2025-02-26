@@ -17,8 +17,9 @@ from scipy.ndimage import label
 from scipy.ndimage import find_objects
 from .elements import element_properties
 import os
+import re
 
-def loadwt(path,filter=None):
+def loadwt(path,filter=False):
     """
     Load in quantitative wt% data.
 
@@ -36,19 +37,43 @@ def loadwt(path,filter=None):
         Python dictionary containing a numpy array for each element or oxide loaded.
 
     """
-    el_dirs = [d for d in os.listdir(path) if d.endswith(".csv")]
+    # el_dirs = [d for d in os.listdir(path) if d.endswith(".csv")]
 
-    Data={}
-    for e in el_dirs:
-        i = np.genfromtxt(path + e, delimiter = ',')
-        for j in list(element_properties.keys()):
-            if e.split(" ",1)[0] == j:
-                e = j
-        Data[e] = np.nan_to_num(i[:,0:-1], copy = False)
-        if filter is not None:
-            Data[e] = nd.median_filter(Data[e], size = 3)
+    # Data={}
+    # for e in el_dirs:
+    #     i = np.genfromtxt(path + e, delimiter = ',')
+    #     for j in list(element_properties.keys()):
+    #         if e.split(" ",1)[0] == j:
+    #             e = j
+    #     Data[e] = np.nan_to_num(i[:,0:-1], copy = False)
+    #     if filter is not None:
+    #         Data[e] = nd.median_filter(Data[e], size = 3)
+
+    # return Data
+        # List all files in the directory
+    all_files = [f for f in os.listdir(path) if f.endswith(".csv")]
+
+    Data = {}
+
+    # Iterate over the files
+    for file in all_files:
+        # Check if the file name contains any key from element_properties
+        for element in element_properties.keys():
+            e = element
+            # Use regex to search for the element name in the file name
+            if re.search(rf"\b{re.escape(element)}\b", file, re.IGNORECASE):
+                # Load the data
+                data_array = np.genfromtxt(os.path.join(path, file), delimiter=',')
+                # Store the data in the dictionary
+                Data[e] = np.nan_to_num(data_array[:, :-1], copy=False)
+
+                # Apply the median filter if specified
+                if filter:
+                    Data[e] = nd.median_filter(Data[e], size=3)
+                break
 
     return Data
+
 
 def loadcnt(path,Oxide,filter=None):
     """
@@ -80,7 +105,7 @@ def loadcnt(path,Oxide,filter=None):
 
     return Data
 
-def calcOxides(Data, Oxide, Copy = None):
+def calcOxides(Data, Oxide, Copy = True):
     """
     Convert element wt% data to oxide wt% data
 
@@ -101,30 +126,33 @@ def calcOxides(Data, Oxide, Copy = None):
         Python dictionary with a numpy array for each oxide specified by the user.
 
     """
-    if Copy is None:
-        Quant_ox = {}
-        for ox in Oxide:
-            if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
-                Quant_ox[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-            if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
-                Quant_ox[ox + str(element_properties[ox][3]) + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-            if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
-                Quant_ox[ox + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-            if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
-                Quant_ox[ox + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-
-    if Copy is not None:
+    if Copy:
         Quant_ox = Data.copy()
         for ox in Oxide:
-            if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
-                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-            if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
-                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-            if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
-                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-            if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
-                Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-
+            if ox != 'O':
+                if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+            elif ox == 'O':
+                del Quant_ox['O']
+    else:
+        Quant_ox = {}
+        for ox in Oxide:
+            if ox != 'O':
+                if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+                    Quant_ox[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+                    Quant_ox[ox + str(element_properties[ox][3]) + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+                    Quant_ox[ox + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+                    Quant_ox[ox + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                
     return Quant_ox
 
 def calcElements(Data, Oxide):
