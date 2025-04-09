@@ -33,7 +33,8 @@ setup(
             'numpy',
             'matplotlib',
             'scikit-learn',
-            'scipy'
+            'scipy',
+            'matplotlib_scalebar'
             ],
 
     classifiers=[

@@ -105,7 +105,7 @@ def loadcnt(path,Oxide,filter=None):
 
     return Data
 
-def calcOxides(Data, Oxide, Copy = True):
+def calcOxides(Data, Elements = None, Copy = False, Oxides = True):
     """
     Convert element wt% data to oxide wt% data
 
@@ -114,11 +114,14 @@ def calcOxides(Data, Oxide, Copy = True):
     Data: dict, required
         Python dictionary containing a numpy array for each element of interest.
 
-    Oxide: list, required
+    Elements: list, required
         List containing the elements that the user wishes to convert into oxide concentrations.
 
-    Copy: str, optional
-        True or False. Default False.
+    Copy: Boolean, optional
+        True or False. Default False. If False will rename each entry in the directionary, e.g., 'Mg' becomes 'MgO'
+
+    Oxides: Boolean, optional
+        True or False. Default True. Is the data supplied Ox% or elemental wt%. If False (elemental wt%) the code will convert this to Ox%. 
 
     Returns:
     ----------
@@ -126,33 +129,62 @@ def calcOxides(Data, Oxide, Copy = True):
         Python dictionary with a numpy array for each oxide specified by the user.
 
     """
-    if Copy:
-        Quant_ox = Data.copy()
-        for ox in Oxide:
-            if ox != 'O':
-                if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
-                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-                if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
-                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-                if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
-                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-                if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
-                    Quant_ox[ox]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-            elif ox == 'O':
-                del Quant_ox['O']
+    if Elements is None:
+        Elements = Data.keys()
+
+    if Oxides:
+        if Copy:
+            Quant_ox = Data.copy()
+            for ox in Elements:
+                if ox != 'O':
+                    if ox in element_properties.keys():
+                        Quant_ox[ox]=Data[ox].copy()
+                elif ox == 'O':
+                    del Quant_ox['O']
+        else:
+            Quant_ox = {}
+            for ox in Elements:
+                if ox != 'O':
+                    if ox in element_properties.keys():
+                        if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+                            Quant_ox[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])]=Data[ox].copy()
+                        if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+                            Quant_ox[ox + str(element_properties[ox][3]) + 'O']=Data[ox].copy()
+                        if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+                            Quant_ox[ox + 'O' + str(element_properties[ox][4])]=Data[ox].copy()
+                        if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+                            Quant_ox[ox + 'O']=Data[ox].copy()
+                    
     else:
-        Quant_ox = {}
-        for ox in Oxide:
-            if ox != 'O':
-                if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
-                    Quant_ox[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-                if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
-                    Quant_ox[ox + str(element_properties[ox][3]) + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-                if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
-                    Quant_ox[ox + 'O' + str(element_properties[ox][4])]=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-                if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
-                    Quant_ox[ox + 'O']=Data[ox]*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
-                
+        if Copy:
+            Quant_ox = Data.copy()
+            for ox in Elements:
+                if ox != 'O':
+                    if ox in element_properties.key():
+                        if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+                            Quant_ox[ox]=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                        if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+                            Quant_ox[ox]=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                        if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+                            Quant_ox[ox]=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                        if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+                            Quant_ox[ox]=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                elif ox == 'O':
+                    del Quant_ox['O']
+        else:
+            Quant_ox = {}
+            for ox in Elements:
+                if ox != 'O':
+                    if ox in element_properties.keys():
+                        if (element_properties[ox][3] > 1) and (element_properties[ox][4] > 1):
+                            Quant_ox[ox + str(element_properties[ox][3]) + 'O' + str(element_properties[ox][4])]=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                        if (element_properties[ox][3] > 1) and (element_properties[ox][4] == 1):
+                            Quant_ox[ox + str(element_properties[ox][3]) + 'O']=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                        if (element_properties[ox][3] == 1) and (element_properties[ox][4] > 1):
+                            Quant_ox[ox + 'O' + str(element_properties[ox][4])]=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                        if (element_properties[ox][3] == 1) and (element_properties[ox][4] == 1):
+                            Quant_ox[ox + 'O']=Data[ox].copy()*(element_properties[ox][2]*element_properties[ox][3]+15.999*element_properties[ox][4])/(element_properties[ox][2]*element_properties[ox][3])
+                    
     return Quant_ox
 
 def calcElements(Data, Oxide):
