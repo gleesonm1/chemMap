@@ -4,6 +4,9 @@ import pandas as pd
 import numpy as np
 import sys
 import scipy
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.colors import ListedColormap, is_color_like
+from copy import deepcopy
 from scipy import stats
 from scipy import ndimage as nd
 from sklearn.cluster import KMeans
@@ -217,6 +220,10 @@ def plot_CompositionMap(Data=None, Elements=None, Bounds=None, Phases=None,
     a.get_xaxis().set_visible(False)
     a.get_yaxis().set_visible(False)
 
+    divider = make_axes_locatable(a)
+    # We track if we've added a colorbar to offset the next one
+    cbar_pad = 0.1
+
     if isinstance(Elements, str):
         Elements = [Elements]
     if Bounds is None:
@@ -254,19 +261,43 @@ def plot_CompositionMap(Data=None, Elements=None, Bounds=None, Phases=None,
         # Handle colormaps or fixed colors
         mask = ~np.isnan(Dat_copy)
 
-        # Handle both colormaps and single fixed colors
+        mask = ~np.isnan(Dat_copy)
+
         if isinstance(cmap_element, str) and cmap_element in plt.colormaps():
-            # Plot with a colormap
-            a.imshow(Dat_copy, cmap=cmap_element, interpolation='none', origin='lower')
+            # 1. Capture the mappable object (im)
+            im = a.imshow(Dat_copy, cmap=cmap_element, interpolation='none', 
+                        origin='lower', vmin=bounds[0], vmax=bounds[1])
+
+            # 2. Create a new axis for this specific colorbar
+            cax = divider.append_axes("right", size="5%", pad=cbar_pad)
+            cb = f.colorbar(im, cax=cax, orientation='vertical')
+            cb.set_label(f'{element} (wt%)')
+            
+            # Increase pad for the next colorbar so they don't overlap
+            cbar_pad += 0.6 
 
             legend_items.append({'label': phase, 'oxide': element, 'cmap': cmap_element, 'color': False})
+            
         elif is_color_like(cmap_element):
-            # Plot with a single fixed color only in valid regions
-            color_data = np.zeros_like(Dat_copy, dtype=float)
-            color_data[mask] = 1.0 
-            color_data[~mask] = np.nan  # Set valid data points to 1
-            a.imshow(color_data, cmap=ListedColormap([cmap_element]), interpolation='none', origin='lower', alpha=1)
+            # For fixed colors, colorbars usually aren't needed, but we plot the layer
+            color_data = np.where(mask, 1.0, np.nan)
+            a.imshow(color_data, cmap=ListedColormap([cmap_element]), 
+                    interpolation='none', origin='lower')
             legend_items.append({'label': phase, 'oxide': '', 'cmap': False, 'color': cmap_element})
+
+        # # Handle both colormaps and single fixed colors
+        # if isinstance(cmap_element, str) and cmap_element in plt.colormaps():
+        #     # Plot with a colormap
+        #     a.imshow(Dat_copy, cmap=cmap_element, interpolation='none', origin='lower')
+
+        #     legend_items.append({'label': phase, 'oxide': element, 'cmap': cmap_element, 'color': False})
+        # elif is_color_like(cmap_element):
+        #     # Plot with a single fixed color only in valid regions
+        #     color_data = np.zeros_like(Dat_copy, dtype=float)
+        #     color_data[mask] = 1.0 
+        #     color_data[~mask] = np.nan  # Set valid data points to 1
+        #     a.imshow(color_data, cmap=ListedColormap([cmap_element]), interpolation='none', origin='lower', alpha=1)
+        #     legend_items.append({'label': phase, 'oxide': '', 'cmap': False, 'color': cmap_element})
 
 
     # # Build the custom legend
